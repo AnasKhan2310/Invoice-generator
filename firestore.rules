@@ -1,0 +1,89 @@
+// ===============================================================
+// Assumed Data Model
+// ===============================================================
+//
+// Collection: users
+// Document ID: {userId}
+// Fields:
+//   - uid: string (required)
+//   - email: string (required, email format)
+//   - companyName: string (optional)
+//   - senderPhone: string (optional)
+//   - senderAddress: string (optional)
+//   - createdAt: timestamp (optional)
+//
+// Collection: invoices
+// Document ID: {invoiceId}
+// Fields:
+//   - userId: string (required) - UID of the owner
+//   - clientName: string
+//   - clientEmail: string
+//   - clientAddress: string
+//   - companyName: string
+//   - senderEmail: string
+//   - senderPhone: string
+//   - senderAddress: string
+//   - invoiceNumber: string
+//   - invoiceDate: string
+//   - dueDate: string
+//   - currency: string
+//   - taxRate: number
+//   - items: list of objects
+//   - subtotal: number
+//   - taxAmount: number
+//   - total: number
+//   - createdAt: timestamp
+//
+// ===============================================================
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function isInvoiceOwner() {
+      return isAuthenticated() && request.auth.uid == resource.data.userId;
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId) && 
+                      request.resource.data.keys().hasAll(['uid', 'email']) &&
+                      request.resource.data.uid == request.auth.uid &&
+                      isValidEmail(request.resource.data.email);
+      allow update: if isOwner(userId) && 
+                      request.resource.data.uid == resource.data.uid;
+    }
+
+    match /invoices/{invoiceId} {
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow list: if isAuthenticated() && request.query.limit <= 100; // Basic list protection
+      allow create: if isAuthenticated() && 
+                      request.resource.data.userId == request.auth.uid &&
+                      request.resource.data.invoiceNumber is string &&
+                      request.resource.data.total is number;
+      allow update: if isInvoiceOwner() && 
+                      request.resource.data.userId == resource.data.userId;
+      allow delete: if isInvoiceOwner();
+    }
+  }
+}

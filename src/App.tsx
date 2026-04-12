@@ -1,0 +1,846 @@
+import React, { useState, useMemo, useEffect } from "react";
+import { Plus, Trash2, Printer, Sparkles, Loader2, Save, History, FilePlus, Building, User, Info, Phone, Mail, MapPin, LogOut, LogIn, UserPlus } from "lucide-react";
+import { motion, AnimatePresence } from "motion/react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Separator } from "@/components/ui/separator";
+import { Textarea } from "@/components/ui/textarea";
+import { auth, db } from "./firebase";
+import { 
+  onAuthStateChanged, 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword, 
+  signOut,
+  GoogleAuthProvider,
+  signInWithPopup,
+  User as FirebaseUser 
+} from "firebase/auth";
+import { 
+  collection, 
+  addDoc, 
+  query, 
+  where, 
+  getDocs, 
+  orderBy, 
+  serverTimestamp,
+  doc,
+  setDoc,
+  getDoc
+} from "firebase/firestore";
+
+interface LineItem {
+  id: string;
+  description: string;
+  quantity: number;
+  unitPrice: number;
+  total: number;
+}
+
+interface InvoiceData {
+  id?: string;
+  clientName: string;
+  clientEmail: string;
+  clientAddress: string;
+  companyName: string;
+  senderEmail: string;
+  senderPhone: string;
+  senderAddress: string;
+  invoiceNumber: string;
+  invoiceDate: string;
+  dueDate: string;
+  currency: string;
+  taxRate: number;
+  notes: string;
+  items: LineItem[];
+}
+
+export default function App() {
+  const [user, setUser] = useState<FirebaseUser | null>(null);
+  const [authMode, setAuthMode] = useState<"login" | "signup">("login");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [username, setUsername] = useState("");
+  const [authError, setAuthError] = useState("");
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
+  const [isProfileSaving, setIsProfileSaving] = useState(false);
+
+  const [data, setData] = useState<InvoiceData>({
+    clientName: "",
+    clientEmail: "",
+    clientAddress: "",
+    companyName: "",
+    senderEmail: "",
+    senderPhone: "",
+    senderAddress: "",
+    invoiceNumber: `INV-${Math.floor(1000 + Math.random() * 9000)}`,
+    invoiceDate: new Date().toISOString().split("T")[0],
+    dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+    currency: "$",
+    taxRate: 10,
+    notes: "Thank you for your business. Please make payment within 7 days.",
+    items: [
+      { id: "1", description: "Service Description", quantity: 1, unitPrice: 0, total: 0 },
+    ],
+  });
+
+  const [aiSummary, setAiSummary] = useState<string>("");
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+  const [history, setHistory] = useState<InvoiceData[]>([]);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      setUser(currentUser);
+      setIsAuthLoading(false);
+      if (currentUser) {
+        // Load user profile if exists
+        const userDoc = await getDoc(doc(db, "users", currentUser.uid));
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          setData(prev => ({
+            ...prev,
+            companyName: userData.companyName || prev.companyName,
+            senderEmail: userData.email || prev.senderEmail,
+            senderPhone: userData.senderPhone || prev.senderPhone,
+            senderAddress: userData.senderAddress || prev.senderAddress,
+          }));
+        }
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const handleAuth = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthError("");
+    setIsAuthLoading(true);
+    try {
+      if (authMode === "login") {
+        await signInWithEmailAndPassword(auth, email, password);
+      } else {
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        // Create user profile
+        await setDoc(doc(db, "users", userCredential.user.uid), {
+          uid: userCredential.user.uid,
+          email: email,
+          username: username,
+          createdAt: serverTimestamp(),
+        });
+      }
+    } catch (error: any) {
+      setAuthError(error.message);
+    } finally {
+      setIsAuthLoading(false);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setAuthError("");
+    setIsAuthLoading(true);
+    try {
+      const provider = new GoogleAuthProvider();
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+      
+      // Check if user profile exists, if not create it
+      const userDoc = await getDoc(doc(db, "users", user.uid));
+      if (!userDoc.exists()) {
+        await setDoc(doc(db, "users", user.uid), {
+          uid: user.uid,
+          email: user.email,
+          username: user.displayName || user.email?.split('@')[0] || "User",
+          createdAt: serverTimestamp(),
+        });
+      }
+    } catch (error: any) {
+      setAuthError(error.message);
+    } finally {
+      setIsAuthLoading(false);
+    }
+  };
+
+  const handleLogout = () => signOut(auth);
+
+  const saveProfile = async () => {
+    if (!user) return;
+    setIsProfileSaving(true);
+    try {
+      await setDoc(doc(db, "users", user.uid), {
+        uid: user.uid,
+        email: user.email,
+        companyName: data.companyName,
+        senderEmail: data.senderEmail,
+        senderPhone: data.senderPhone,
+        senderAddress: data.senderAddress,
+        updatedAt: serverTimestamp(),
+      }, { merge: true });
+      alert("Business profile saved successfully!");
+    } catch (error: any) {
+      console.error(error);
+      alert("Error saving profile: " + error.message);
+    } finally {
+      setIsProfileSaving(false);
+    }
+  };
+
+  const subtotal = useMemo(() => {
+    return data.items.reduce((acc, item) => acc + item.total, 0);
+  }, [data.items]);
+
+  const taxAmount = useMemo(() => {
+    return (subtotal * data.taxRate) / 100;
+  }, [subtotal, data.taxRate]);
+
+  const total = useMemo(() => {
+    return subtotal + taxAmount;
+  }, [subtotal, taxAmount]);
+
+  const handleAddItem = () => {
+    const newItem: LineItem = {
+      id: Math.random().toString(36).substr(2, 9),
+      description: "",
+      quantity: 1,
+      unitPrice: 0,
+      total: 0,
+    };
+    setData({ ...data, items: [...data.items, newItem] });
+  };
+
+  const handleRemoveItem = (id: string) => {
+    if (data.items.length === 1) return;
+    setData({ ...data, items: data.items.filter((item) => item.id !== id) });
+  };
+
+  const handleItemChange = (id: string, field: keyof LineItem, value: string | number) => {
+    const updatedItems = data.items.map((item) => {
+      if (item.id === id) {
+        const updatedItem = { ...item, [field]: value };
+        if (field === "quantity" || field === "unitPrice") {
+          updatedItem.total = Number(updatedItem.quantity) * Number(updatedItem.unitPrice);
+        }
+        return updatedItem;
+      }
+      return item;
+    });
+    setData({ ...data, items: updatedItems });
+  };
+
+  const saveInvoice = async () => {
+    if (!user) return;
+    setIsSaving(true);
+    try {
+      await addDoc(collection(db, "invoices"), {
+        ...data,
+        userId: user.uid,
+        subtotal,
+        taxAmount,
+        total,
+        createdAt: serverTimestamp(),
+      });
+      alert("Invoice saved successfully!");
+    } catch (error: any) {
+      console.error(error);
+      alert("Error saving invoice: " + error.message);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const loadHistory = async () => {
+    if (!user) return;
+    setShowHistory(true);
+    try {
+      const q = query(
+        collection(db, "invoices"), 
+        where("userId", "==", user.uid),
+        orderBy("createdAt", "desc")
+      );
+      const querySnapshot = await getDocs(q);
+      const docs = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as InvoiceData));
+      setHistory(docs);
+    } catch (error: any) {
+      console.error(error);
+    }
+  };
+
+  const generateAiSummary = async () => {
+    setIsGenerating(true);
+    try {
+      const response = await fetch("/api/generate-summary", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ invoiceData: { ...data, subtotal, taxAmount, total } }),
+      });
+      const result = await response.json();
+      if (result.summary) {
+        setAiSummary(result.summary);
+      } else {
+        throw new Error(result.error || "Failed to generate summary");
+      }
+    } catch (error) {
+      console.error(error);
+      setAiSummary("Error generating summary. Please check your API key configuration.");
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const handlePrint = () => {
+    window.print();
+  };
+
+  if (isAuthLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6">
+        <Card className="w-full max-w-md shadow-xl">
+          <CardHeader className="text-center space-y-2">
+            <div className="mx-auto w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center mb-2">
+              <FilePlus className="text-white w-7 h-7" />
+            </div>
+            <CardTitle className="text-2xl font-bold text-slate-800">
+              {authMode === "login" ? "Welcome Back" : "Create Account"}
+            </CardTitle>
+            <p className="text-slate-500 text-sm">
+              {authMode === "login" ? "Login to manage your invoices" : "Sign up to start creating invoices"}
+            </p>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleAuth} className="space-y-4">
+              {authMode === "signup" && (
+                <div className="space-y-2">
+                  <Label>Username</Label>
+                  <Input 
+                    placeholder="johndoe" 
+                    value={username} 
+                    onChange={(e) => setUsername(e.target.value)} 
+                    required 
+                  />
+                </div>
+              )}
+              <div className="space-y-2">
+                <Label>Email Address</Label>
+                <Input 
+                  type="email" 
+                  placeholder="name@company.com" 
+                  value={email} 
+                  onChange={(e) => setEmail(e.target.value)} 
+                  required 
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Password</Label>
+                <Input 
+                  type="password" 
+                  placeholder="••••••••" 
+                  value={password} 
+                  onChange={(e) => setPassword(e.target.value)} 
+                  required 
+                />
+              </div>
+              {authError && <p className="text-red-500 text-xs">{authError}</p>}
+              <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 h-11">
+                {authMode === "login" ? "Sign In" : "Create Account"}
+              </Button>
+            </form>
+
+            <div className="mt-4">
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-white px-2 text-slate-500">Or continue with</span>
+                </div>
+              </div>
+
+              <Button 
+                variant="outline" 
+                type="button" 
+                className="w-full mt-4 h-11 gap-2" 
+                onClick={handleGoogleSignIn}
+              >
+                <svg className="w-5 h-5" viewBox="0 0 24 24">
+                  <path
+                    fill="currentColor"
+                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                  />
+                  <path
+                    fill="currentColor"
+                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                  />
+                  <path
+                    fill="currentColor"
+                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"
+                  />
+                  <path
+                    fill="currentColor"
+                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                  />
+                </svg>
+                Google
+              </Button>
+            </div>
+            <div className="mt-6 text-center">
+              <button 
+                onClick={() => setAuthMode(authMode === "login" ? "signup" : "login")}
+                className="text-sm text-blue-600 hover:underline font-medium"
+              >
+                {authMode === "login" ? "Don't have an account? Sign up" : "Already have an account? Login"}
+              </button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-slate-50 flex flex-col">
+      {/* Top Navigation */}
+      <header className="h-16 bg-white border-b flex items-center justify-between px-6 sticky top-0 z-50 no-print">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 bg-blue-600 rounded flex items-center justify-center">
+            <FilePlus className="text-white w-5 h-5" />
+          </div>
+          <h1 className="text-xl font-bold text-blue-700 hidden sm:block">Invoice Pro</h1>
+        </div>
+        <div className="flex items-center gap-2 sm:gap-3">
+          <Button variant="outline" size="sm" onClick={() => setData({
+            ...data,
+            id: undefined,
+            invoiceNumber: `INV-${Math.floor(1000 + Math.random() * 9000)}`,
+            items: [{ id: "1", description: "", quantity: 1, unitPrice: 0, total: 0 }]
+          })} className="gap-2">
+            <Plus className="w-4 h-4" /> <span className="hidden sm:inline">New</span>
+          </Button>
+          <Button variant="outline" size="sm" onClick={loadHistory} className="gap-2">
+            <History className="w-4 h-4" /> <span className="hidden sm:inline">History</span>
+          </Button>
+          <Button variant="outline" size="sm" onClick={saveInvoice} disabled={isSaving} className="gap-2">
+            {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+            <span className="hidden sm:inline">Save</span>
+          </Button>
+          <Button onClick={handlePrint} size="sm" className="bg-blue-600 hover:bg-blue-700 gap-2">
+            <Printer className="w-4 h-4" /> <span className="hidden sm:inline">Print / PDF</span>
+          </Button>
+          <Separator orientation="vertical" className="h-6 mx-1" />
+          <Button variant="ghost" size="icon" onClick={handleLogout} className="text-slate-500 hover:text-red-500">
+            <LogOut className="w-4 h-4" />
+          </Button>
+        </div>
+      </header>
+
+      <main className="flex-1 flex flex-col lg:flex-row overflow-hidden relative">
+        {/* History Overlay */}
+        <AnimatePresence>
+          {showHistory && (
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 z-[60] bg-black/20 backdrop-blur-sm flex justify-center items-start p-6 overflow-y-auto"
+              onClick={() => setShowHistory(false)}
+            >
+              <motion.div 
+                initial={{ scale: 0.95, y: 20 }}
+                animate={{ scale: 1, y: 0 }}
+                className="bg-white w-full max-w-2xl rounded-xl shadow-2xl overflow-hidden"
+                onClick={e => e.stopPropagation()}
+              >
+                <div className="p-6 border-b flex justify-between items-center bg-slate-50">
+                  <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+                    <History className="w-5 h-5 text-blue-600" /> Invoice History
+                  </h2>
+                  <Button variant="ghost" size="sm" onClick={() => setShowHistory(false)}>Close</Button>
+                </div>
+                <div className="p-6 space-y-4">
+                  {history.length === 0 ? (
+                    <div className="text-center py-12 text-slate-400">No saved invoices found.</div>
+                  ) : (
+                    history.map(inv => (
+                      <div 
+                        key={inv.id} 
+                        className="flex items-center justify-between p-4 border rounded-lg hover:bg-slate-50 cursor-pointer transition-colors"
+                        onClick={() => {
+                          setData(inv);
+                          setShowHistory(false);
+                        }}
+                      >
+                        <div>
+                          <p className="font-bold text-slate-900">{inv.invoiceNumber}</p>
+                          <p className="text-xs text-slate-500">{inv.clientName} • {inv.invoiceDate}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-bold text-blue-600">{inv.currency}{inv.total?.toLocaleString()}</p>
+                          <p className="text-[10px] uppercase font-bold text-slate-400">View Details</p>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Left Side: Form Area */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-6 no-print bg-slate-50 lg:max-w-xl border-r">
+          {/* Invoice Info */}
+          <Card className="shadow-sm">
+            <CardHeader className="pb-3 flex flex-row items-center gap-2">
+              <Info className="w-4 h-4 text-slate-400" />
+              <CardTitle className="text-sm font-bold uppercase tracking-wider text-slate-500">Invoice Info</CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-xs font-semibold text-slate-600">Invoice Number</Label>
+                <Input 
+                  value={data.invoiceNumber} 
+                  onChange={(e) => setData({...data, invoiceNumber: e.target.value})}
+                  className="bg-slate-50/50"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs font-semibold text-slate-600">Date</Label>
+                <Input 
+                  type="date"
+                  value={data.invoiceDate} 
+                  onChange={(e) => setData({...data, invoiceDate: e.target.value})}
+                  className="bg-slate-50/50"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs font-semibold text-slate-600">Due Date</Label>
+                <Input 
+                  type="date"
+                  value={data.dueDate} 
+                  onChange={(e) => setData({...data, dueDate: e.target.value})}
+                  className="bg-slate-50/50"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs font-semibold text-slate-600">Currency</Label>
+                <Input 
+                  value={data.currency} 
+                  onChange={(e) => setData({...data, currency: e.target.value})}
+                  placeholder="$"
+                  className="bg-slate-50/50"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs font-semibold text-slate-600">Tax Rate (%)</Label>
+                <Input 
+                  type="number"
+                  value={data.taxRate} 
+                  onChange={(e) => setData({...data, taxRate: Number(e.target.value)})}
+                  className="bg-slate-50/50"
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Notes & Terms */}
+          <Card className="shadow-sm">
+            <CardHeader className="pb-3 flex flex-row items-center gap-2">
+              <FilePlus className="w-4 h-4 text-slate-400" />
+              <CardTitle className="text-sm font-bold uppercase tracking-wider text-slate-500">Notes & Terms</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Textarea 
+                value={data.notes} 
+                onChange={(e) => setData({...data, notes: e.target.value})}
+                placeholder="Additional notes or payment terms..."
+                className="bg-slate-50/50 min-h-[100px]"
+              />
+            </CardContent>
+          </Card>
+
+          {/* Business Details */}
+          <Card className="shadow-sm">
+            <CardHeader className="pb-3 flex flex-row items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Building className="w-4 h-4 text-slate-400" />
+                <CardTitle className="text-sm font-bold uppercase tracking-wider text-slate-500">Business Details (Sender)</CardTitle>
+              </div>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={saveProfile} 
+                disabled={isProfileSaving}
+                className="text-blue-600 hover:text-blue-700 h-8 text-xs"
+              >
+                {isProfileSaving ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <Save className="w-3 h-3 mr-1" />}
+                Save Profile
+              </Button>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label className="text-xs font-semibold text-slate-600">Business Name</Label>
+                <Input 
+                  value={data.companyName} 
+                  onChange={(e) => setData({...data, companyName: e.target.value})}
+                  className="bg-slate-50/50"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-xs font-semibold text-slate-600">Email</Label>
+                  <Input 
+                    value={data.senderEmail} 
+                    onChange={(e) => setData({...data, senderEmail: e.target.value})}
+                    className="bg-slate-50/50"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs font-semibold text-slate-600">Phone</Label>
+                  <Input 
+                    value={data.senderPhone} 
+                    onChange={(e) => setData({...data, senderPhone: e.target.value})}
+                    className="bg-slate-50/50"
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs font-semibold text-slate-600">Address</Label>
+                <Textarea 
+                  value={data.senderAddress} 
+                  onChange={(e) => setData({...data, senderAddress: e.target.value})}
+                  className="bg-slate-50/50 min-h-[80px]"
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Client Details */}
+          <Card className="shadow-sm">
+            <CardHeader className="pb-3 flex flex-row items-center gap-2">
+              <User className="w-4 h-4 text-slate-400" />
+              <CardTitle className="text-sm font-bold uppercase tracking-wider text-slate-500">Client Details</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label className="text-xs font-semibold text-slate-600">Client Name</Label>
+                <Input 
+                  value={data.clientName} 
+                  onChange={(e) => setData({...data, clientName: e.target.value})}
+                  className="bg-slate-50/50"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs font-semibold text-slate-600">Email</Label>
+                <Input 
+                  value={data.clientEmail} 
+                  onChange={(e) => setData({...data, clientEmail: e.target.value})}
+                  className="bg-slate-50/50"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs font-semibold text-slate-600">Address</Label>
+                <Textarea 
+                  value={data.clientAddress} 
+                  onChange={(e) => setData({...data, clientAddress: e.target.value})}
+                  className="bg-slate-50/50 min-h-[80px]"
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Items */}
+          <Card className="shadow-sm">
+            <CardHeader className="pb-3 flex flex-row items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Plus className="w-4 h-4 text-slate-400" />
+                <CardTitle className="text-sm font-bold uppercase tracking-wider text-slate-500">Line Items</CardTitle>
+              </div>
+              <Button variant="ghost" size="sm" onClick={handleAddItem} className="text-blue-600 hover:text-blue-700">
+                Add Item
+              </Button>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {data.items.map((item) => (
+                <div key={item.id} className="p-4 border rounded-lg bg-slate-50/30 space-y-3 relative group">
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    onClick={() => handleRemoveItem(item.id)}
+                    className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-white border shadow-sm text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                  </Button>
+                  <div className="space-y-2">
+                    <Label className="text-[10px] uppercase font-bold text-slate-400">Description</Label>
+                    <Input 
+                      value={item.description} 
+                      onChange={(e) => handleItemChange(item.id, "description", e.target.value)}
+                      className="h-8 text-sm"
+                    />
+                  </div>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="space-y-1">
+                      <Label className="text-[10px] uppercase font-bold text-slate-400">Qty</Label>
+                      <Input 
+                        type="number"
+                        value={item.quantity} 
+                        onChange={(e) => handleItemChange(item.id, "quantity", e.target.value)}
+                        className="h-8 text-sm"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[10px] uppercase font-bold text-slate-400">Rate</Label>
+                      <Input 
+                        type="number"
+                        value={item.unitPrice} 
+                        onChange={(e) => handleItemChange(item.id, "unitPrice", e.target.value)}
+                        className="h-8 text-sm"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[10px] uppercase font-bold text-slate-400">Amount</Label>
+                      <div className="h-8 flex items-center px-3 bg-slate-100 rounded text-sm font-medium">
+                        {data.currency}{item.total.toLocaleString()}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+
+          {/* AI Summary Button */}
+          <div className="pt-4">
+            <Button 
+              onClick={generateAiSummary} 
+              disabled={isGenerating} 
+              className="w-full bg-blue-600 hover:bg-blue-700 gap-2 h-12 text-lg font-semibold"
+            >
+              {isGenerating ? <Loader2 className="w-5 h-5 animate-spin" /> : <Sparkles className="w-5 h-5" />}
+              Generate AI Cover Note
+            </Button>
+          </div>
+        </div>
+
+        {/* Right Side: Preview Area */}
+        <div className="flex-1 bg-slate-200/50 p-8 overflow-y-auto flex justify-center">
+          <div className="invoice-preview w-full max-w-[800px] min-h-[1000px] p-12 flex flex-col">
+            {/* Invoice Header */}
+            <div className="flex justify-between items-start mb-12">
+              <div>
+                <h2 className="text-5xl font-black text-blue-600 tracking-tighter mb-2 italic">INVOICE</h2>
+                <p className="text-slate-900 font-bold text-xl">{data.companyName || "Your Company"}</p>
+              </div>
+              <div className="text-right space-y-1">
+                <p className="text-sm"><span className="font-bold">Invoice #:</span> {data.invoiceNumber}</p>
+                <p className="text-sm"><span className="font-bold">Date:</span> {data.invoiceDate}</p>
+                <p className="text-sm"><span className="font-bold">Due Date:</span> {data.dueDate}</p>
+              </div>
+            </div>
+
+            {/* From / Bill To */}
+            <div className="grid grid-cols-2 gap-12 mb-12">
+              <div className="space-y-4">
+                <h3 className="text-[10px] uppercase font-black tracking-widest text-slate-400 border-b pb-1">From</h3>
+                <div className="space-y-1">
+                  <p className="font-bold text-slate-900">{data.companyName || "Your Company"}</p>
+                  <p className="text-sm text-slate-600">{data.senderAddress || "Address"}</p>
+                  <p className="text-sm text-slate-600">{data.senderEmail || "Email"}</p>
+                  <p className="text-sm text-slate-600">{data.senderPhone || "Phone"}</p>
+                </div>
+              </div>
+              <div className="space-y-4">
+                <h3 className="text-[10px] uppercase font-black tracking-widest text-slate-400 border-b pb-1">Bill To</h3>
+                <div className="space-y-1">
+                  <p className="font-bold text-slate-900">{data.clientName || "Client Name"}</p>
+                  <p className="text-sm text-slate-600">{data.clientAddress || "Address"}</p>
+                  <p className="text-sm text-slate-600">{data.clientEmail || "Email"}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Items Table */}
+            <div className="flex-1">
+              <Table>
+                <TableHeader>
+                  <TableRow className="border-b-2 border-slate-900 hover:bg-transparent">
+                    <TableHead className="text-[10px] uppercase font-black text-slate-900 px-0">Description</TableHead>
+                    <TableHead className="text-[10px] uppercase font-black text-slate-900 text-center">Qty</TableHead>
+                    <TableHead className="text-[10px] uppercase font-black text-slate-900 text-right">Rate</TableHead>
+                    <TableHead className="text-[10px] uppercase font-black text-slate-900 text-right pr-0">Amount</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {data.items.map((item) => (
+                    <TableRow key={item.id} className="border-b border-slate-100 hover:bg-transparent">
+                      <TableCell className="py-4 px-0 font-medium text-slate-700">{item.description || "—"}</TableCell>
+                      <TableCell className="py-4 text-center text-slate-700">{item.quantity}</TableCell>
+                      <TableCell className="py-4 text-right text-slate-700">{data.currency}{item.unitPrice.toLocaleString()}</TableCell>
+                      <TableCell className="py-4 text-right font-bold text-slate-900 pr-0">{data.currency}{item.total.toLocaleString()}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+
+            {/* Totals */}
+            <div className="mt-12 space-y-4">
+              <div className="flex justify-end">
+                <div className="w-64 space-y-3">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-500 font-bold">Subtotal</span>
+                    <span className="font-bold text-slate-900">{data.currency}{subtotal.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-500 font-bold">Tax ({data.taxRate}%)</span>
+                    <span className="font-bold text-slate-900">{data.currency}{taxAmount.toLocaleString()}</span>
+                  </div>
+                  <Separator className="bg-slate-900 h-0.5" />
+                  <div className="flex justify-between items-end">
+                    <span className="text-2xl font-black text-blue-600 tracking-tighter italic">Total</span>
+                    <span className="text-3xl font-black text-blue-600">{data.currency}{total.toLocaleString()}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* AI Summary */}
+            {aiSummary && (
+              <div className="mt-12 p-6 bg-blue-50 rounded-lg border border-blue-100">
+                <div className="flex items-center gap-2 mb-2 text-blue-700">
+                  <Sparkles className="w-4 h-4" />
+                  <span className="text-[10px] uppercase font-black tracking-widest">AI Cover Note</span>
+                </div>
+                <p className="text-sm text-slate-700 leading-relaxed italic">
+                  {aiSummary}
+                </p>
+              </div>
+            )}
+
+            {/* Notes Section in Preview */}
+            {data.notes && (
+              <div className="mt-8">
+                <h3 className="text-[10px] uppercase font-black tracking-widest text-slate-400 border-b pb-1 mb-2">Notes & Terms</h3>
+                <p className="text-sm text-slate-600 whitespace-pre-wrap">{data.notes}</p>
+              </div>
+            )}
+
+            {/* Footer */}
+            <div className="mt-auto pt-12 text-center">
+              <p className="text-[10px] uppercase font-black tracking-[0.3em] text-slate-300">Thank you for your business</p>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+}
