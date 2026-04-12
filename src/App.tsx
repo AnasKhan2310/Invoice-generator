@@ -414,7 +414,7 @@ export default function App() {
           <div className="w-8 h-8 bg-blue-600 rounded flex items-center justify-center">
             <FilePlus className="text-white w-5 h-5" />
           </div>
-          <h1 className="text-xl font-bold text-blue-700 hidden sm:block">Invoice Pro</h1>
+          <h1 className="text-xl font-bold text-blue-700 hidden sm:block">🧾 InvoiceProAI</h1>
         </div>
         <div className="flex items-center gap-2 sm:gap-3">
           <Button variant="outline" size="sm" onClick={() => setData({

@@ -1,4 +1,4 @@
-# AI Invoice Pro 🚀
+# 🧾 InvoiceProAI
 
 A professional, AI-powered invoice generator built with React, Firebase, and Gemini AI. Create, manage, and save professional invoices with ease.
 
