@@ -423,10 +423,10 @@ export default function App() {
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
       {/* Top Navigation */}
-      <header className="h-16 bg-white border-b flex items-center justify-between px-6 sticky top-0 z-50 no-print">
+      <header className="h-16 bg-white border-b flex items-center justify-between px-4 sm:px-6 sticky top-0 z-50 no-print">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 flex items-center justify-center">
-            <svg viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2.5" strokeLinejoin="round" className="w-8 h-8">
+          <div className="w-8 h-8 flex items-center justify-center shrink-0">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2.5" strokeLinejoin="round" className="w-7 h-7 sm:w-8 sm:h-8">
               <path d="M8 6C8 4.89543 8.89543 4 10 4H18C19.1046 4 20 4.89543 20 6V20C20 21.1046 19.1046 22 18 22H6C4.89543 22 4 21.1046 4 20V10C4 7.79086 5.79086 6 8 6Z" />
               <path d="M8 6C8 7.10457 7.10457 8 6 8C4.89543 8 4 7.10457 4 6C4 4.89543 4.89543 4 6 4C7.10457 4 8 4.89543 8 6Z" />
               <rect x="8" y="12" width="8" height="4" />
@@ -434,35 +434,35 @@ export default function App() {
               <line x1="14" y1="19" x2="16" y2="19" strokeLinecap="round" />
             </svg>
           </div>
-          <h1 className="text-xl font-bold text-blue-700 hidden sm:block">InvoiceProAI</h1>
+          <h1 className="text-lg sm:text-xl font-bold text-blue-700 hidden xs:block">InvoiceProAI</h1>
         </div>
-        <div className="flex items-center gap-2 sm:gap-3">
+        <div className="flex items-center gap-1 sm:gap-3">
           <Button variant="outline" size="sm" onClick={() => setData({
             ...data,
             id: undefined,
             invoiceNumber: `INV-${Math.floor(1000 + Math.random() * 9000)}`,
             items: [{ id: "1", description: "", quantity: 1, unitPrice: 0, total: 0 }]
-          })} className="gap-2">
-            <Plus className="w-4 h-4" /> <span className="hidden sm:inline">New</span>
+          })} className="h-8 sm:h-9 px-2 sm:px-3 gap-1 sm:gap-2">
+            <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> <span className="hidden md:inline">New</span>
           </Button>
-          <Button variant="outline" size="sm" onClick={loadHistory} className="gap-2">
-            <History className="w-4 h-4" /> <span className="hidden sm:inline">History</span>
+          <Button variant="outline" size="sm" onClick={loadHistory} className="h-8 sm:h-9 px-2 sm:px-3 gap-1 sm:gap-2">
+            <History className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> <span className="hidden md:inline">History</span>
           </Button>
-          <Button variant="outline" size="sm" onClick={saveInvoice} disabled={isSaving} className="gap-2">
-            {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-            <span className="hidden sm:inline">Save</span>
+          <Button variant="outline" size="sm" onClick={saveInvoice} disabled={isSaving} className="h-8 sm:h-9 px-2 sm:px-3 gap-1 sm:gap-2">
+            {isSaving ? <Loader2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-spin" /> : <Save className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
+            <span className="hidden md:inline">Save</span>
           </Button>
-          <Button onClick={handlePrint} size="sm" className="bg-blue-600 hover:bg-blue-700 gap-2">
-            <Printer className="w-4 h-4" /> <span className="hidden sm:inline">Print / PDF</span>
+          <Button onClick={handlePrint} size="sm" className="h-8 sm:h-9 px-2 sm:px-3 bg-blue-600 hover:bg-blue-700 gap-1 sm:gap-2">
+            <Printer className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> <span className="hidden md:inline">Print / PDF</span>
           </Button>
-          <Separator orientation="vertical" className="h-6 mx-1" />
-          <Button variant="ghost" size="icon" onClick={handleLogout} className="text-slate-500 hover:text-red-500">
-            <LogOut className="w-4 h-4" />
+          <Separator orientation="vertical" className="h-5 sm:h-6 mx-0.5 sm:mx-1" />
+          <Button variant="ghost" size="icon" onClick={handleLogout} className="h-8 w-8 sm:h-9 sm:w-9 text-slate-500 hover:text-red-500">
+            <LogOut className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           </Button>
         </div>
       </header>
 
-      <main className="flex-1 flex flex-col lg:flex-row overflow-hidden relative">
+      <main className="flex-1 flex flex-col lg:flex-row overflow-y-auto lg:overflow-hidden relative">
         {/* History Overlay */}
         <AnimatePresence>
           {showHistory && (
@@ -470,41 +470,41 @@ export default function App() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="absolute inset-0 z-[60] bg-black/20 backdrop-blur-sm flex justify-center items-start p-6 overflow-y-auto"
+              className="fixed inset-0 z-[60] bg-black/20 backdrop-blur-sm flex justify-center items-start p-4 sm:p-6 overflow-y-auto"
               onClick={() => setShowHistory(false)}
             >
               <motion.div 
                 initial={{ scale: 0.95, y: 20 }}
                 animate={{ scale: 1, y: 0 }}
-                className="bg-white w-full max-w-2xl rounded-xl shadow-2xl overflow-hidden"
+                className="bg-white w-full max-w-2xl rounded-xl shadow-2xl overflow-hidden my-auto"
                 onClick={e => e.stopPropagation()}
               >
-                <div className="p-6 border-b flex justify-between items-center bg-slate-50">
-                  <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+                <div className="p-4 sm:p-6 border-b flex justify-between items-center bg-slate-50">
+                  <h2 className="text-lg sm:text-xl font-bold text-slate-800 flex items-center gap-2">
                     <History className="w-5 h-5 text-blue-600" /> Invoice History
                   </h2>
                   <Button variant="ghost" size="sm" onClick={() => setShowHistory(false)}>Close</Button>
                 </div>
-                <div className="p-6 space-y-4">
+                <div className="p-4 sm:p-6 space-y-3 sm:space-y-4">
                   {history.length === 0 ? (
                     <div className="text-center py-12 text-slate-400">No saved invoices found.</div>
                   ) : (
                     history.map(inv => (
                       <div 
                         key={inv.id} 
-                        className="flex items-center justify-between p-4 border rounded-lg hover:bg-slate-50 cursor-pointer transition-colors"
+                        className="flex items-center justify-between p-3 sm:p-4 border rounded-lg hover:bg-slate-50 cursor-pointer transition-colors"
                         onClick={() => {
                           setData(inv);
                           setShowHistory(false);
                         }}
                       >
-                        <div>
-                          <p className="font-bold text-slate-900">{inv.invoiceNumber}</p>
-                          <p className="text-xs text-slate-500">{inv.clientName} • {inv.invoiceDate}</p>
+                        <div className="min-w-0 flex-1 mr-4">
+                          <p className="font-bold text-slate-900 truncate">{inv.invoiceNumber}</p>
+                          <p className="text-xs text-slate-500 truncate">{inv.clientName} • {inv.invoiceDate}</p>
                         </div>
-                        <div className="text-right">
+                        <div className="text-right shrink-0">
                           <p className="font-bold text-blue-600">{inv.currency}{inv.total?.toLocaleString()}</p>
-                          <p className="text-[10px] uppercase font-bold text-slate-400">View Details</p>
+                          <p className="text-[10px] uppercase font-bold text-slate-400">View</p>
                         </div>
                       </div>
                     ))
@@ -516,14 +516,14 @@ export default function App() {
         </AnimatePresence>
 
         {/* Left Side: Form Area */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6 no-print bg-slate-50 lg:max-w-xl border-r">
+        <div className="flex-none lg:flex-1 lg:overflow-y-auto p-4 sm:p-6 space-y-6 no-print bg-slate-50 lg:max-w-xl border-r">
           {/* Invoice Info */}
           <Card className="shadow-sm">
             <CardHeader className="pb-3 flex flex-row items-center gap-2">
               <Info className="w-4 h-4 text-slate-400" />
               <CardTitle className="text-sm font-bold uppercase tracking-wider text-slate-500">Invoice Info</CardTitle>
             </CardHeader>
-            <CardContent className="grid grid-cols-2 gap-4">
+            <CardContent className="grid grid-cols-1 xs:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label className="text-xs font-semibold text-slate-600">Invoice Number</Label>
                 <Input 
@@ -614,7 +614,7 @@ export default function App() {
                   className="bg-slate-50/50"
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 xs:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label className="text-xs font-semibold text-slate-600">Email</Label>
                   <Input 
@@ -707,7 +707,7 @@ export default function App() {
                       className="h-8 text-sm"
                     />
                   </div>
-                  <div className="grid grid-cols-3 gap-3">
+                  <div className="grid grid-cols-2 xs:grid-cols-3 gap-3">
                     <div className="space-y-1">
                       <Label className="text-[10px] uppercase font-bold text-slate-400">Qty</Label>
                       <Input 
@@ -726,7 +726,7 @@ export default function App() {
                         className="h-8 text-sm"
                       />
                     </div>
-                    <div className="space-y-1">
+                    <div className="space-y-1 col-span-2 xs:col-span-1">
                       <Label className="text-[10px] uppercase font-bold text-slate-400">Amount</Label>
                       <div className="h-8 flex items-center px-3 bg-slate-100 rounded text-sm font-medium">
                         {data.currency}{item.total.toLocaleString()}
@@ -752,70 +752,72 @@ export default function App() {
         </div>
 
         {/* Right Side: Preview Area */}
-        <div className="flex-1 bg-slate-200/50 p-8 overflow-y-auto flex justify-center">
-          <div className="invoice-preview w-full max-w-[800px] min-h-[1000px] p-12 flex flex-col">
+        <div className="flex-none lg:flex-1 bg-slate-200/50 p-4 sm:p-8 lg:overflow-y-auto flex justify-center">
+          <div className="invoice-preview w-full max-w-[800px] min-h-[600px] sm:min-h-[1000px] p-6 sm:p-12 flex flex-col">
             {/* Invoice Header */}
-            <div className="flex justify-between items-start mb-12">
+            <div className="flex flex-col sm:flex-row justify-between items-start gap-6 sm:gap-0 mb-8 sm:mb-12">
               <div>
-                <h2 className="text-5xl font-black text-blue-600 tracking-tighter mb-2 italic">INVOICE</h2>
-                <p className="text-slate-900 font-bold text-xl">{data.companyName || "Your Company"}</p>
+                <h2 className="text-4xl sm:text-5xl font-black text-blue-600 tracking-tighter mb-2 italic">INVOICE</h2>
+                <p className="text-slate-900 font-bold text-lg sm:text-xl">{data.companyName || "Your Company"}</p>
               </div>
-              <div className="text-right space-y-1">
-                <p className="text-sm"><span className="font-bold">Invoice #:</span> {data.invoiceNumber}</p>
-                <p className="text-sm"><span className="font-bold">Date:</span> {data.invoiceDate}</p>
-                <p className="text-sm"><span className="font-bold">Due Date:</span> {data.dueDate}</p>
+              <div className="text-left sm:text-right space-y-1">
+                <p className="text-xs sm:text-sm"><span className="font-bold">Invoice #:</span> {data.invoiceNumber}</p>
+                <p className="text-xs sm:text-sm"><span className="font-bold">Date:</span> {data.invoiceDate}</p>
+                <p className="text-xs sm:text-sm"><span className="font-bold">Due Date:</span> {data.dueDate}</p>
               </div>
             </div>
 
             {/* From / Bill To */}
-            <div className="grid grid-cols-2 gap-12 mb-12">
-              <div className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 sm:gap-12 mb-8 sm:mb-12">
+              <div className="space-y-3 sm:space-y-4">
                 <h3 className="text-[10px] uppercase font-black tracking-widest text-slate-400 border-b pb-1">From</h3>
                 <div className="space-y-1">
                   <p className="font-bold text-slate-900">{data.companyName || "Your Company"}</p>
-                  <p className="text-sm text-slate-600">{data.senderAddress || "Address"}</p>
-                  <p className="text-sm text-slate-600">{data.senderEmail || "Email"}</p>
-                  <p className="text-sm text-slate-600">{data.senderPhone || "Phone"}</p>
+                  <p className="text-xs sm:text-sm text-slate-600">{data.senderAddress || "Address"}</p>
+                  <p className="text-xs sm:text-sm text-slate-600">{data.senderEmail || "Email"}</p>
+                  <p className="text-xs sm:text-sm text-slate-600">{data.senderPhone || "Phone"}</p>
                 </div>
               </div>
-              <div className="space-y-4">
+              <div className="space-y-3 sm:space-y-4">
                 <h3 className="text-[10px] uppercase font-black tracking-widest text-slate-400 border-b pb-1">Bill To</h3>
                 <div className="space-y-1">
                   <p className="font-bold text-slate-900">{data.clientName || "Client Name"}</p>
-                  <p className="text-sm text-slate-600">{data.clientAddress || "Address"}</p>
-                  <p className="text-sm text-slate-600">{data.clientEmail || "Email"}</p>
+                  <p className="text-xs sm:text-sm text-slate-600">{data.clientAddress || "Address"}</p>
+                  <p className="text-xs sm:text-sm text-slate-600">{data.clientEmail || "Email"}</p>
                 </div>
               </div>
             </div>
 
             {/* Items Table */}
-            <div className="flex-1">
-              <Table>
-                <TableHeader>
-                  <TableRow className="border-b-2 border-slate-900 hover:bg-transparent">
-                    <TableHead className="text-[10px] uppercase font-black text-slate-900 px-0">Description</TableHead>
-                    <TableHead className="text-[10px] uppercase font-black text-slate-900 text-center">Qty</TableHead>
-                    <TableHead className="text-[10px] uppercase font-black text-slate-900 text-right">Rate</TableHead>
-                    <TableHead className="text-[10px] uppercase font-black text-slate-900 text-right pr-0">Amount</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {data.items.map((item) => (
-                    <TableRow key={item.id} className="border-b border-slate-100 hover:bg-transparent">
-                      <TableCell className="py-4 px-0 font-medium text-slate-700">{item.description || "—"}</TableCell>
-                      <TableCell className="py-4 text-center text-slate-700">{item.quantity}</TableCell>
-                      <TableCell className="py-4 text-right text-slate-700">{data.currency}{item.unitPrice.toLocaleString()}</TableCell>
-                      <TableCell className="py-4 text-right font-bold text-slate-900 pr-0">{data.currency}{item.total.toLocaleString()}</TableCell>
+            <div className="flex-1 overflow-x-auto -mx-2 sm:mx-0">
+              <div className="min-w-[500px] px-2 sm:px-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-b-2 border-slate-900 hover:bg-transparent">
+                      <TableHead className="text-[10px] uppercase font-black text-slate-900 px-0">Description</TableHead>
+                      <TableHead className="text-[10px] uppercase font-black text-slate-900 text-center">Qty</TableHead>
+                      <TableHead className="text-[10px] uppercase font-black text-slate-900 text-right">Rate</TableHead>
+                      <TableHead className="text-[10px] uppercase font-black text-slate-900 text-right pr-0">Amount</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {data.items.map((item) => (
+                      <TableRow key={item.id} className="border-b border-slate-100 hover:bg-transparent">
+                        <TableCell className="py-3 sm:py-4 px-0 font-medium text-slate-700">{item.description || "—"}</TableCell>
+                        <TableCell className="py-3 sm:py-4 text-center text-slate-700">{item.quantity}</TableCell>
+                        <TableCell className="py-3 sm:py-4 text-right text-slate-700">{data.currency}{item.unitPrice.toLocaleString()}</TableCell>
+                        <TableCell className="py-3 sm:py-4 text-right font-bold text-slate-900 pr-0">{data.currency}{item.total.toLocaleString()}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             </div>
 
             {/* Totals */}
-            <div className="mt-12 space-y-4">
+            <div className="mt-8 sm:mt-12 space-y-4">
               <div className="flex justify-end">
-                <div className="w-64 space-y-3">
+                <div className="w-full sm:w-64 space-y-3">
                   <div className="flex justify-between text-sm">
                     <span className="text-slate-500 font-bold">Subtotal</span>
                     <span className="font-bold text-slate-900">{data.currency}{subtotal.toLocaleString()}</span>
@@ -826,8 +828,8 @@ export default function App() {
                   </div>
                   <Separator className="bg-slate-900 h-0.5" />
                   <div className="flex justify-between items-end">
-                    <span className="text-2xl font-black text-blue-600 tracking-tighter italic">Total</span>
-                    <span className="text-3xl font-black text-blue-600">{data.currency}{total.toLocaleString()}</span>
+                    <span className="text-xl sm:text-2xl font-black text-blue-600 tracking-tighter italic">Total</span>
+                    <span className="text-2xl sm:text-3xl font-black text-blue-600">{data.currency}{total.toLocaleString()}</span>
                   </div>
                 </div>
               </div>
