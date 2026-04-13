@@ -132,7 +132,11 @@ export default function App() {
         });
       }
     } catch (error: any) {
-      setAuthError(error.message);
+      if (error.code === "auth/unauthorized-domain") {
+        setAuthError(`Domain not authorized: ${window.location.hostname}. Please add this exact domain to Firebase Console.`);
+      } else {
+        setAuthError(error.message);
+      }
     } finally {
       setIsAuthLoading(false);
     }
@@ -157,7 +161,11 @@ export default function App() {
         });
       }
     } catch (error: any) {
-      setAuthError(error.message);
+      if (error.code === "auth/unauthorized-domain") {
+        setAuthError(`Domain not authorized: ${window.location.hostname}. Please add this exact domain to Firebase Console.`);
+      } else {
+        setAuthError(error.message);
+      }
     } finally {
       setIsAuthLoading(false);
     }
@@ -306,8 +314,14 @@ export default function App() {
       <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6">
         <Card className="w-full max-w-md shadow-xl">
           <CardHeader className="text-center space-y-2">
-            <div className="mx-auto w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center mb-2">
-              <FilePlus className="text-white w-7 h-7" />
+            <div className="mx-auto w-12 h-12 flex items-center justify-center mb-2">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2.5" strokeLinejoin="round" className="w-12 h-12">
+                <path d="M8 6C8 4.89543 8.89543 4 10 4H18C19.1046 4 20 4.89543 20 6V20C20 21.1046 19.1046 22 18 22H6C4.89543 22 4 21.1046 4 20V10C4 7.79086 5.79086 6 8 6Z" />
+                <path d="M8 6C8 7.10457 7.10457 8 6 8C4.89543 8 4 7.10457 4 6C4 4.89543 4.89543 4 6 4C7.10457 4 8 4.89543 8 6Z" />
+                <rect x="8" y="12" width="8" height="4" />
+                <line x1="13" y1="12" x2="13" y2="16" />
+                <line x1="14" y1="19" x2="16" y2="19" strokeLinecap="round" />
+              </svg>
             </div>
             <CardTitle className="text-2xl font-bold text-slate-800">
               {authMode === "login" ? "Welcome Back" : "Create Account"}
@@ -411,10 +425,16 @@ export default function App() {
       {/* Top Navigation */}
       <header className="h-16 bg-white border-b flex items-center justify-between px-6 sticky top-0 z-50 no-print">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-blue-600 rounded flex items-center justify-center">
-            <FilePlus className="text-white w-5 h-5" />
+          <div className="w-8 h-8 flex items-center justify-center">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2.5" strokeLinejoin="round" className="w-8 h-8">
+              <path d="M8 6C8 4.89543 8.89543 4 10 4H18C19.1046 4 20 4.89543 20 6V20C20 21.1046 19.1046 22 18 22H6C4.89543 22 4 21.1046 4 20V10C4 7.79086 5.79086 6 8 6Z" />
+              <path d="M8 6C8 7.10457 7.10457 8 6 8C4.89543 8 4 7.10457 4 6C4 4.89543 4.89543 4 6 4C7.10457 4 8 4.89543 8 6Z" />
+              <rect x="8" y="12" width="8" height="4" />
+              <line x1="13" y1="12" x2="13" y2="16" />
+              <line x1="14" y1="19" x2="16" y2="19" strokeLinecap="round" />
+            </svg>
           </div>
-          <h1 className="text-xl font-bold text-blue-700 hidden sm:block">🧾 InvoiceProAI</h1>
+          <h1 className="text-xl font-bold text-blue-700 hidden sm:block">InvoiceProAI</h1>
         </div>
         <div className="flex items-center gap-2 sm:gap-3">
           <Button variant="outline" size="sm" onClick={() => setData({
