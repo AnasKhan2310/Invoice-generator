@@ -54,4 +54,4 @@ A professional, AI-powered invoice generator built with React, Firebase, and Gem
 Distributed under the MIT License. See `LICENSE` for more information.
 
 ---
-Built with ❤️ by [Your Name]
+Built with ❤️ by Anas Khan
