@@ -92,6 +92,9 @@ export default function App() {
   const [showHistory, setShowHistory] = useState(false);
   const [history, setHistory] = useState<InvoiceData[]>([]);
 
+  const [activeTab, setActiveTab] = useState<"info" | "business" | "client" | "items">("info");
+  const [showPreviewMobile, setShowPreviewMobile] = useState(false);
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
@@ -437,27 +440,31 @@ export default function App() {
           <h1 className="text-lg sm:text-xl font-bold text-blue-700 hidden xs:block">InvoiceProAI</h1>
         </div>
         <div className="flex items-center gap-1 sm:gap-3">
-          <Button variant="outline" size="sm" onClick={() => setData({
-            ...data,
-            id: undefined,
-            invoiceNumber: `INV-${Math.floor(1000 + Math.random() * 9000)}`,
-            items: [{ id: "1", description: "", quantity: 1, unitPrice: 0, total: 0 }]
-          })} className="h-8 sm:h-9 px-2 sm:px-3 gap-1 sm:gap-2">
-            <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> <span className="hidden md:inline">New</span>
+          <Button variant="outline" size="sm" onClick={() => {
+            if (confirm("Reset current invoice? Unsaved changes will be lost.")) {
+              setData({
+                ...data,
+                id: undefined,
+                invoiceNumber: `INV-${Math.floor(1000 + Math.random() * 9000)}`,
+                items: [{ id: "1", description: "", quantity: 1, unitPrice: 0, total: 0 }]
+              });
+            }
+          }} className="h-8 sm:h-9 px-2 sm:px-3 gap-1 sm:gap-2 border-slate-200">
+            <Plus className="w-4 h-4" /> <span className="hidden lg:inline font-bold">New</span>
           </Button>
-          <Button variant="outline" size="sm" onClick={loadHistory} className="h-8 sm:h-9 px-2 sm:px-3 gap-1 sm:gap-2">
-            <History className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> <span className="hidden md:inline">History</span>
+          <Button variant="outline" size="sm" onClick={loadHistory} className="h-8 sm:h-9 px-2 sm:px-3 gap-1 sm:gap-2 border-slate-200">
+            <History className="w-4 h-4" /> <span className="hidden lg:inline font-bold">History</span>
           </Button>
-          <Button variant="outline" size="sm" onClick={saveInvoice} disabled={isSaving} className="h-8 sm:h-9 px-2 sm:px-3 gap-1 sm:gap-2">
-            {isSaving ? <Loader2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-spin" /> : <Save className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
-            <span className="hidden md:inline">Save</span>
+          <Button variant="outline" size="sm" onClick={saveInvoice} disabled={isSaving} className="h-8 sm:h-9 px-2 sm:px-3 gap-1 sm:gap-2 border-slate-200">
+            {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+            <span className="hidden sm:inline font-bold">Save</span>
           </Button>
-          <Button onClick={handlePrint} size="sm" className="h-8 sm:h-9 px-2 sm:px-3 bg-blue-600 hover:bg-blue-700 gap-1 sm:gap-2">
-            <Printer className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> <span className="hidden md:inline">Print / PDF</span>
+          <Button onClick={handlePrint} size="sm" className="h-8 sm:h-9 px-2 sm:px-3 bg-blue-600 hover:bg-blue-700 gap-1 sm:gap-2 text-white shadow-sm font-bold">
+            <Printer className="w-4 h-4" /> <span className="hidden sm:inline">Download / PDF</span>
           </Button>
-          <Separator orientation="vertical" className="h-5 sm:h-6 mx-0.5 sm:mx-1" />
-          <Button variant="ghost" size="icon" onClick={handleLogout} className="h-8 w-8 sm:h-9 sm:w-9 text-slate-500 hover:text-red-500">
-            <LogOut className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+          <Separator orientation="vertical" className="h-5 sm:h-6 mx-0.5 sm:mx-1 bg-slate-200" />
+          <Button variant="ghost" size="icon" onClick={handleLogout} className="h-8 w-8 sm:h-9 sm:w-9 text-slate-400 hover:text-red-500 hover:bg-red-50">
+            <LogOut className="w-4 h-4" />
           </Button>
         </div>
       </header>
@@ -516,244 +523,347 @@ export default function App() {
         </AnimatePresence>
 
         {/* Left Side: Form Area */}
-        <div className="flex-none lg:flex-1 lg:overflow-y-auto p-4 sm:p-6 space-y-6 no-print bg-slate-50 lg:max-w-xl border-r">
-          {/* Invoice Info */}
-          <Card className="shadow-sm">
-            <CardHeader className="pb-3 flex flex-row items-center gap-2">
-              <Info className="w-4 h-4 text-slate-400" />
-              <CardTitle className="text-sm font-bold uppercase tracking-wider text-slate-500">Invoice Info</CardTitle>
-            </CardHeader>
-            <CardContent className="grid grid-cols-1 xs:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label className="text-xs font-semibold text-slate-600">Invoice Number</Label>
-                <Input 
-                  value={data.invoiceNumber} 
-                  onChange={(e) => setData({...data, invoiceNumber: e.target.value})}
-                  className="bg-slate-50/50"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-xs font-semibold text-slate-600">Date</Label>
-                <Input 
-                  type="date"
-                  value={data.invoiceDate} 
-                  onChange={(e) => setData({...data, invoiceDate: e.target.value})}
-                  className="bg-slate-50/50"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-xs font-semibold text-slate-600">Due Date</Label>
-                <Input 
-                  type="date"
-                  value={data.dueDate} 
-                  onChange={(e) => setData({...data, dueDate: e.target.value})}
-                  className="bg-slate-50/50"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-xs font-semibold text-slate-600">Currency</Label>
-                <Input 
-                  value={data.currency} 
-                  onChange={(e) => setData({...data, currency: e.target.value})}
-                  placeholder="$"
-                  className="bg-slate-50/50"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-xs font-semibold text-slate-600">Tax Rate (%)</Label>
-                <Input 
-                  type="number"
-                  value={data.taxRate} 
-                  onChange={(e) => setData({...data, taxRate: Number(e.target.value)})}
-                  className="bg-slate-50/50"
-                />
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Notes & Terms */}
-          <Card className="shadow-sm">
-            <CardHeader className="pb-3 flex flex-row items-center gap-2">
-              <FilePlus className="w-4 h-4 text-slate-400" />
-              <CardTitle className="text-sm font-bold uppercase tracking-wider text-slate-500">Notes & Terms</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Textarea 
-                value={data.notes} 
-                onChange={(e) => setData({...data, notes: e.target.value})}
-                placeholder="Additional notes or payment terms..."
-                className="bg-slate-50/50 min-h-[100px]"
-              />
-            </CardContent>
-          </Card>
-
-          {/* Business Details */}
-          <Card className="shadow-sm">
-            <CardHeader className="pb-3 flex flex-row items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Building className="w-4 h-4 text-slate-400" />
-                <CardTitle className="text-sm font-bold uppercase tracking-wider text-slate-500">Business Details (Sender)</CardTitle>
-              </div>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={saveProfile} 
-                disabled={isProfileSaving}
-                className="text-blue-600 hover:text-blue-700 h-8 text-xs"
+        <div className={`flex-none lg:flex-1 lg:overflow-y-auto p-4 sm:p-6 space-y-6 no-print bg-slate-50 lg:max-w-xl border-r ${showPreviewMobile ? 'hidden' : 'block'}`}>
+          {/* Form Navigation Tabs */}
+          <div className="flex bg-slate-200/50 p-1 rounded-xl gap-1 mb-6 relative">
+            {(["info", "business", "client", "items"] as const).map((tab) => (
+              <button 
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={`flex-1 py-2 text-[10px] sm:text-xs font-black uppercase tracking-widest rounded-lg transition-colors relative z-10 ${activeTab === tab ? 'text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}
               >
-                {isProfileSaving ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <Save className="w-3 h-3 mr-1" />}
-                Save Profile
-              </Button>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label className="text-xs font-semibold text-slate-600">Business Name</Label>
-                <Input 
-                  value={data.companyName} 
-                  onChange={(e) => setData({...data, companyName: e.target.value})}
-                  className="bg-slate-50/50"
-                />
-              </div>
-              <div className="grid grid-cols-1 xs:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label className="text-xs font-semibold text-slate-600">Email</Label>
-                  <Input 
-                    value={data.senderEmail} 
-                    onChange={(e) => setData({...data, senderEmail: e.target.value})}
-                    className="bg-slate-50/50"
+                {activeTab === tab && (
+                  <motion.div 
+                    layoutId="activeTab"
+                    className="absolute inset-0 bg-white shadow-sm rounded-lg -z-10"
+                    transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
                   />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-xs font-semibold text-slate-600">Phone</Label>
-                  <Input 
-                    value={data.senderPhone} 
-                    onChange={(e) => setData({...data, senderPhone: e.target.value})}
-                    className="bg-slate-50/50"
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label className="text-xs font-semibold text-slate-600">Address</Label>
-                <Textarea 
-                  value={data.senderAddress} 
-                  onChange={(e) => setData({...data, senderAddress: e.target.value})}
-                  className="bg-slate-50/50 min-h-[80px]"
-                />
-              </div>
-            </CardContent>
-          </Card>
+                )}
+                {tab}
+              </button>
+            ))}
+          </div>
 
-          {/* Client Details */}
-          <Card className="shadow-sm">
-            <CardHeader className="pb-3 flex flex-row items-center gap-2">
-              <User className="w-4 h-4 text-slate-400" />
-              <CardTitle className="text-sm font-bold uppercase tracking-wider text-slate-500">Client Details</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label className="text-xs font-semibold text-slate-600">Client Name</Label>
-                <Input 
-                  value={data.clientName} 
-                  onChange={(e) => setData({...data, clientName: e.target.value})}
-                  className="bg-slate-50/50"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-xs font-semibold text-slate-600">Email</Label>
-                <Input 
-                  value={data.clientEmail} 
-                  onChange={(e) => setData({...data, clientEmail: e.target.value})}
-                  className="bg-slate-50/50"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-xs font-semibold text-slate-600">Address</Label>
-                <Textarea 
-                  value={data.clientAddress} 
-                  onChange={(e) => setData({...data, clientAddress: e.target.value})}
-                  className="bg-slate-50/50 min-h-[80px]"
-                />
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Items */}
-          <Card className="shadow-sm">
-            <CardHeader className="pb-3 flex flex-row items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Plus className="w-4 h-4 text-slate-400" />
-                <CardTitle className="text-sm font-bold uppercase tracking-wider text-slate-500">Line Items</CardTitle>
-              </div>
-              <Button variant="ghost" size="sm" onClick={handleAddItem} className="text-blue-600 hover:text-blue-700">
-                Add Item
-              </Button>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {data.items.map((item) => (
-                <div key={item.id} className="p-4 border rounded-lg bg-slate-50/30 space-y-3 relative group">
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    onClick={() => handleRemoveItem(item.id)}
-                    className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-white border shadow-sm text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
-                  >
-                    <Trash2 className="w-3 h-3" />
-                  </Button>
-                  <div className="space-y-2">
-                    <Label className="text-[10px] uppercase font-bold text-slate-400">Description</Label>
-                    <Input 
-                      value={item.description} 
-                      onChange={(e) => handleItemChange(item.id, "description", e.target.value)}
-                      className="h-8 text-sm"
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 xs:grid-cols-3 gap-3">
-                    <div className="space-y-1">
-                      <Label className="text-[10px] uppercase font-bold text-slate-400">Qty</Label>
+          <AnimatePresence mode="wait">
+            {activeTab === "info" && (
+              <motion.div
+                key="info"
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 10 }}
+                className="space-y-6"
+              >
+                {/* Invoice Info */}
+                <Card className="shadow-sm border-none bg-white">
+                  <CardHeader className="pb-3 flex flex-row items-center gap-2">
+                    <div className="p-2 bg-blue-50 rounded-lg">
+                      <Info className="w-4 h-4 text-blue-600" />
+                    </div>
+                    <CardTitle className="text-sm font-bold uppercase tracking-wider text-slate-700">General Information</CardTitle>
+                  </CardHeader>
+                  <CardContent className="grid grid-cols-1 xs:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label className="text-xs font-semibold text-slate-600 px-1">Invoice Number</Label>
                       <Input 
-                        type="number"
-                        value={item.quantity} 
-                        onChange={(e) => handleItemChange(item.id, "quantity", e.target.value)}
-                        className="h-8 text-sm"
+                        value={data.invoiceNumber} 
+                        onChange={(e) => setData({...data, invoiceNumber: e.target.value})}
+                        className="bg-slate-50/50 border-slate-200 focus:border-blue-500 focus:ring-blue-500 transition-all"
                       />
                     </div>
-                    <div className="space-y-1">
-                      <Label className="text-[10px] uppercase font-bold text-slate-400">Rate</Label>
+                    <div className="space-y-2">
+                      <Label className="text-xs font-semibold text-slate-600 px-1">Date</Label>
                       <Input 
-                        type="number"
-                        value={item.unitPrice} 
-                        onChange={(e) => handleItemChange(item.id, "unitPrice", e.target.value)}
-                        className="h-8 text-sm"
+                        type="date"
+                        value={data.invoiceDate} 
+                        onChange={(e) => setData({...data, invoiceDate: e.target.value})}
+                        className="bg-slate-50/50 border-slate-200 focus:border-blue-500 transition-all"
                       />
                     </div>
-                    <div className="space-y-1 col-span-2 xs:col-span-1">
-                      <Label className="text-[10px] uppercase font-bold text-slate-400">Amount</Label>
-                      <div className="h-8 flex items-center px-3 bg-slate-100 rounded text-sm font-medium">
-                        {data.currency}{item.total.toLocaleString()}
+                    <div className="space-y-2">
+                      <Label className="text-xs font-semibold text-slate-600 px-1">Due Date</Label>
+                      <Input 
+                        type="date"
+                        value={data.dueDate} 
+                        onChange={(e) => setData({...data, dueDate: e.target.value})}
+                        className="bg-slate-50/50 border-slate-200 focus:border-blue-500 transition-all"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs font-semibold text-slate-600 px-1">Currency</Label>
+                      <Input 
+                        value={data.currency} 
+                        onChange={(e) => setData({...data, currency: e.target.value})}
+                        placeholder="$"
+                        className="bg-slate-50/50 border-slate-200 focus:border-blue-500 transition-all"
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="shadow-sm border-none bg-white">
+                  <CardHeader className="pb-3 flex flex-row items-center gap-2">
+                    <div className="p-2 bg-blue-50 rounded-lg">
+                      <FilePlus className="w-4 h-4 text-blue-600" />
+                    </div>
+                    <CardTitle className="text-sm font-bold uppercase tracking-wider text-slate-700">Financials & Notes</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                      <Label className="text-xs font-semibold text-slate-600 px-1">Tax Rate (%)</Label>
+                      <Input 
+                        type="number"
+                        value={data.taxRate} 
+                        onChange={(e) => setData({...data, taxRate: Number(e.target.value)})}
+                        className="bg-slate-50/50 border-slate-200 focus:border-blue-500 transition-all w-32"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs font-semibold text-slate-600 px-1">Additional Notes</Label>
+                      <Textarea 
+                        value={data.notes} 
+                        onChange={(e) => setData({...data, notes: e.target.value})}
+                        placeholder="Additional notes or payment terms..."
+                        className="bg-slate-50/50 border-slate-200 focus:border-blue-500 transition-all min-h-[120px]"
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            )}
+
+            {activeTab === "business" && (
+              <motion.div
+                key="business"
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 10 }}
+                className="space-y-6"
+              >
+                <Card className="shadow-sm border-none bg-white">
+                  <CardHeader className="pb-3 flex flex-row items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="p-2 bg-blue-50 rounded-lg">
+                        <Building className="w-4 h-4 text-blue-600" />
+                      </div>
+                      <CardTitle className="text-sm font-bold uppercase tracking-wider text-slate-700">Your Business Profile</CardTitle>
+                    </div>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={saveProfile} 
+                      disabled={isProfileSaving}
+                      className="text-blue-600 bg-blue-50/50 border-blue-100 hover:bg-blue-100 h-8 text-xs font-bold"
+                    >
+                      {isProfileSaving ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <Save className="w-3 h-3 mr-1" />}
+                      Update Profile
+                    </Button>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                      <Label className="text-xs font-semibold text-slate-600 px-1">Business Name</Label>
+                      <Input 
+                        value={data.companyName} 
+                        onChange={(e) => setData({...data, companyName: e.target.value})}
+                        className="bg-slate-50/50 border-slate-200 focus:border-blue-500 transition-all"
+                        placeholder="Legal Entity Name"
+                      />
+                    </div>
+                    <div className="grid grid-cols-1 xs:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label className="text-xs font-semibold text-slate-600 px-1">Support Email</Label>
+                        <Input 
+                          value={data.senderEmail} 
+                          onChange={(e) => setData({...data, senderEmail: e.target.value})}
+                          className="bg-slate-50/50 border-slate-200 focus:border-blue-500 transition-all"
+                          placeholder="billing@company.com"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-xs font-semibold text-slate-600 px-1">Phone Number</Label>
+                        <Input 
+                          value={data.senderPhone} 
+                          onChange={(e) => setData({...data, senderPhone: e.target.value})}
+                          className="bg-slate-50/50 border-slate-200 focus:border-blue-500 transition-all"
+                          placeholder="+1 (555) 000-0000"
+                        />
                       </div>
                     </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs font-semibold text-slate-600 px-1">Business Address</Label>
+                      <Textarea 
+                        value={data.senderAddress} 
+                        onChange={(e) => setData({...data, senderAddress: e.target.value})}
+                        className="bg-slate-50/50 border-slate-200 focus:border-blue-500 transition-all min-h-[100px]"
+                        placeholder="Street Address, City, State, ZIP"
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            )}
+
+            {activeTab === "client" && (
+              <motion.div
+                key="client"
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 10 }}
+                className="space-y-6"
+              >
+                <Card className="shadow-sm border-none bg-white">
+                  <CardHeader className="pb-3 flex flex-row items-center gap-2">
+                    <div className="p-2 bg-blue-50 rounded-lg">
+                      <User className="w-4 h-4 text-blue-600" />
+                    </div>
+                    <CardTitle className="text-sm font-bold uppercase tracking-wider text-slate-700">Client Information</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                      <Label className="text-xs font-semibold text-slate-600 px-1">Client Name / Company</Label>
+                      <Input 
+                        value={data.clientName} 
+                        onChange={(e) => setData({...data, clientName: e.target.value})}
+                        className="bg-slate-50/50 border-slate-200 focus:border-blue-500 transition-all"
+                        placeholder="Full name or company name"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs font-semibold text-slate-600 px-1">Contact Email</Label>
+                      <Input 
+                        value={data.clientEmail} 
+                        onChange={(e) => setData({...data, clientEmail: e.target.value})}
+                        className="bg-slate-50/50 border-slate-200 focus:border-blue-500 transition-all"
+                        placeholder="client@email.com"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs font-semibold text-slate-600 px-1">Billing Address</Label>
+                      <Textarea 
+                        value={data.clientAddress} 
+                        onChange={(e) => setData({...data, clientAddress: e.target.value})}
+                        className="bg-slate-50/50 border-slate-200 focus:border-blue-500 transition-all min-h-[100px]"
+                        placeholder="Street Address, City, State, ZIP"
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            )}
+
+            {activeTab === "items" && (
+              <motion.div
+                key="items"
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 10 }}
+                className="space-y-6"
+              >
+                <Card className="shadow-sm border-none bg-white">
+                  <CardHeader className="pb-3 flex flex-row items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="p-2 bg-blue-50 rounded-lg">
+                        <Plus className="w-4 h-4 text-blue-600" />
+                      </div>
+                      <CardTitle className="text-sm font-bold uppercase tracking-wider text-slate-700">Invoice Line Items</CardTitle>
+                    </div>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={handleAddItem} 
+                      className="text-blue-600 border-blue-200 hover:bg-blue-50 h-8 font-bold"
+                    >
+                      <Plus className="w-3 h-3 mr-1" /> Add Line
+                    </Button>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {data.items.map((item) => (
+                      <div key={item.id} className="p-4 border border-slate-100 rounded-xl bg-slate-50/50 space-y-3 relative group transition-all hover:bg-white hover:shadow-md hover:border-slate-200">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          onClick={() => handleRemoveItem(item.id)}
+                          className="absolute -top-2 -right-2 h-7 w-7 rounded-full bg-white border border-slate-200 shadow-sm text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all z-10"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                        <div className="space-y-2">
+                          <Label className="text-[10px] uppercase font-black tracking-widest text-slate-400 px-1">Description</Label>
+                          <Input 
+                            value={item.description} 
+                            onChange={(e) => handleItemChange(item.id, "description", e.target.value)}
+                            className="bg-white border-slate-200 focus:border-blue-500 h-10 text-sm"
+                            placeholder="Identify service or product"
+                          />
+                        </div>
+                        <div className="grid grid-cols-2 xs:grid-cols-3 gap-3">
+                          <div className="space-y-1">
+                            <Label className="text-[10px] uppercase font-black tracking-widest text-slate-400 px-1">Qty</Label>
+                            <Input 
+                              type="number"
+                              value={item.quantity} 
+                              onChange={(e) => handleItemChange(item.id, "quantity", e.target.value)}
+                              className="bg-white border-slate-200 h-10 text-sm"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-[10px] uppercase font-black tracking-widest text-slate-400 px-1">Rate</Label>
+                            <Input 
+                              type="number"
+                              value={item.unitPrice} 
+                              onChange={(e) => handleItemChange(item.id, "unitPrice", e.target.value)}
+                              className="bg-white border-slate-200 h-10 text-sm"
+                            />
+                          </div>
+                          <div className="space-y-1 col-span-2 xs:col-span-1">
+                            <Label className="text-[10px] uppercase font-black tracking-widest text-slate-400 px-1">Amount</Label>
+                            <div className="h-10 flex items-center px-4 bg-slate-100/80 rounded-lg text-sm font-bold text-slate-700">
+                              {data.currency}{item.total.toLocaleString()}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+
+                {/* AI Summary Button */}
+                <div className="pt-2 space-y-3">
+                  <Button 
+                    onClick={generateAiSummary} 
+                    disabled={isGenerating} 
+                    className="w-full bg-blue-600 hover:bg-blue-700 gap-2 h-12 text-sm font-black uppercase tracking-widest shadow-lg shadow-blue-200 transition-all hover:scale-[1.01] active:scale-95"
+                  >
+                    {isGenerating ? <Loader2 className="w-5 h-5 animate-spin" /> : <Sparkles className="w-5 h-5" />}
+                    Generate AI Cover Note
+                  </Button>
+                  
+                  <div className="grid grid-cols-2 gap-3 lg:hidden">
+                    <Button 
+                      variant="outline"
+                      onClick={saveInvoice} 
+                      disabled={isSaving}
+                      className="gap-2 h-11 border-slate-200 font-bold"
+                    >
+                      {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                      Save
+                    </Button>
+                    <Button 
+                      onClick={handlePrint} 
+                      className="bg-slate-900 hover:bg-slate-800 gap-2 h-11 font-bold text-white shadow-sm"
+                    >
+                      <Printer className="w-4 h-4" />
+                      Print
+                    </Button>
                   </div>
                 </div>
-              ))}
-            </CardContent>
-          </Card>
-
-          {/* AI Summary Button */}
-          <div className="pt-4">
-            <Button 
-              onClick={generateAiSummary} 
-              disabled={isGenerating} 
-              className="w-full bg-blue-600 hover:bg-blue-700 gap-2 h-12 text-lg font-semibold"
-            >
-              {isGenerating ? <Loader2 className="w-5 h-5 animate-spin" /> : <Sparkles className="w-5 h-5" />}
-              Generate AI Cover Note
-            </Button>
-          </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
         {/* Right Side: Preview Area */}
-        <div className="flex-none lg:flex-1 bg-slate-200/50 p-4 sm:p-8 lg:overflow-y-auto flex justify-center">
-          <div className="invoice-preview w-full max-w-[800px] min-h-[600px] sm:min-h-[1000px] p-6 sm:p-12 flex flex-col">
+        <div className={`flex-none lg:flex-1 bg-slate-200/50 p-4 sm:p-8 lg:overflow-y-auto flex justify-center ${showPreviewMobile ? 'block' : 'hidden lg:flex'}`}>
+          <div className="invoice-preview w-full max-w-[800px] min-h-[600px] sm:min-h-[1000px] p-6 sm:p-12 flex flex-col bg-white shadow-2xl rounded-none sm:rounded-sm">
             {/* Invoice Header */}
             <div className="flex flex-col sm:flex-row justify-between items-start gap-6 sm:gap-0 mb-8 sm:mb-12">
               <div>
@@ -863,6 +973,25 @@ export default function App() {
           </div>
         </div>
       </main>
+      {/* Floating Mobile Toggle */}
+      <div className="lg:hidden fixed bottom-6 right-6 z-[40] flex flex-col gap-3 no-print">
+        <Button 
+          onClick={() => setShowPreviewMobile(!showPreviewMobile)}
+          className="w-14 h-14 rounded-full bg-blue-600 hover:bg-blue-700 shadow-xl flex items-center justify-center p-0"
+        >
+          {showPreviewMobile ? (
+            <div className="flex flex-col items-center">
+              <FilePlus className="w-5 h-5" />
+              <span className="text-[8px] font-black uppercase mt-1">Form</span>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center">
+              <Printer className="w-5 h-5" />
+              <span className="text-[8px] font-black uppercase mt-1">View</span>
+            </div>
+          )}
+        </Button>
+      </div>
     </div>
   );
 }
