@@ -757,7 +757,7 @@ export default function App() {
             {/* Invoice Header */}
             <div className="flex flex-col sm:flex-row justify-between items-start gap-6 sm:gap-0 mb-8 sm:mb-12">
               <div>
-                <h2 className="text-4xl sm:text-5xl font-black text-blue-600 tracking-tighter mb-2 italic">INVOICE</h2>
+                <h2 className="text-4xl sm:text-5xl font-black text-blue-600 tracking-tighter mb-2">INVOICE</h2>
                 <p className="text-slate-900 font-bold text-lg sm:text-xl">{data.companyName || "Your Company"}</p>
               </div>
               <div className="text-left sm:text-right space-y-1">
@@ -828,7 +828,7 @@ export default function App() {
                   </div>
                   <Separator className="bg-slate-900 h-0.5" />
                   <div className="flex justify-between items-end">
-                    <span className="text-xl sm:text-2xl font-black text-blue-600 tracking-tighter italic">Total</span>
+                    <span className="text-xl sm:text-2xl font-black text-blue-600 tracking-tighter">Total</span>
                     <span className="text-2xl sm:text-3xl font-black text-blue-600">{data.currency}{total.toLocaleString()}</span>
                   </div>
                 </div>
@@ -842,7 +842,7 @@ export default function App() {
                   <Sparkles className="w-4 h-4" />
                   <span className="text-[10px] uppercase font-black tracking-widest">AI Cover Note</span>
                 </div>
-                <p className="text-sm text-slate-700 leading-relaxed italic">
+                <p className="text-sm text-slate-700 leading-relaxed">
                   {aiSummary}
                 </p>
               </div>
